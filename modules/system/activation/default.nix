@@ -171,11 +171,7 @@ in
 
             substituteInPlace $out/activate --subst-var-by systemConfig $out
 
-            ${coreutils}/bin/ln -sr ${
-              if !config.finit.enable
-              then "${pkgs.dinit}/bin/dinit"
-              else "${config.finit.package}/bin/finit"
-            } $out/init
+            ${coreutils}/bin/ln -sr ${config.finit.package}/bin/finit $out/init
             ${coreutils}/bin/ln -s ${config.environment.path} $out/sw
             ${coreutils}/bin/ln -s ${config.system.build.inhibitSwitch} $out/switch-inhibitors
 
@@ -197,7 +193,7 @@ in
           ''
           + ''
             cp ${
-              if !config.finit.enable
+              if config ? dinit && config.dinit.services != { }
               then ../../dinit/switch-to-configuration.sh
               else ../../finit/switch-to-configuration.sh
             } $out/bin/switch-to-configuration
@@ -209,7 +205,7 @@ in
               --subst-var-by coreutils ${config.programs.coreutils.package} \
               --subst-var-by installHook ${config.providers.bootloader.installHook} \
               --subst-var-by inhibitCheck ${config.system.build.checkSwitchInhibitors} \
-              ${if !config.finit.enable
+              ${if config ? dinit && config.dinit.services != { }
                 then "--subst-var-by dinitctl ${pkgs.dinit}"
                 else "--subst-var-by finit ${config.finit.package}"}
           ''
