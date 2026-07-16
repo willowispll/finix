@@ -8,6 +8,10 @@ let
   cfg = config.dinit;
 
   format = pkgs.formats.keyValue { };
+
+  envFormat = pkgs.formats.keyValue {
+    mkKeyValue = k: v: "${k}=${v}";
+  };
 in
 {
   options.dinit = {
@@ -18,7 +22,7 @@ in
             imports = [ ./common-options.nix ];
 
             config.env-file = lib.mkIf (config.environment != { }) (
-              format.generate "${name}.env" config.environment
+              envFormat.generate "${name}.env" config.environment
             );
           }
         )
@@ -41,7 +45,7 @@ in
             ];
 
             config.env-file = lib.mkIf (config.environment != { }) (
-              format.generate "${name}.env" config.environment
+              envFormat.generate "${name}.env" config.environment
             );
           }
         )
@@ -63,7 +67,9 @@ in
           "enable"
           "environment"
           "path"
+          "boot"
         ];
+
 
         userTree = lib.mapAttrs' (name: service: {
           name = "dinit.d/user/${name}";
@@ -75,6 +81,19 @@ in
           value.source = settingsFormat.generate name (builtins.removeAttrs service extraAttrs);
         }) (lib.filterAttrs (_: service: service.enable) cfg.services);
       in
-      userTree // systemTree;
+      userTree // systemTree // {
+        "dinit.d/boot".source = settingsFormat.generate "boot" {
+          type = "internal";
+          "depends-on.d" = "boot.d";
+        };
+        "dinit.d/boot.d/.keep".text = "";
+      };
+
+    system.activation.scripts.dinitBootD = {
+      deps = [ "etc" ];
+      text = lib.concatMapStrings (
+        name: "ln -sf ../${name} /etc/dinit.d/boot.d/${name}\n"
+      ) (lib.attrNames (lib.filterAttrs (_: s: s.boot) cfg.services));
+    };
   };
 }
