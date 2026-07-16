@@ -99,5 +99,30 @@ in
         name: "ln -sf ../${name} /etc/dinit.d/boot.d/${name}\n"
       ) (lib.attrNames (lib.filterAttrs (_: s: s.boot) cfg.services));
     };
+    system.activation.scripts.dinit-reload = {
+          deps = [ "etc" "dinitBootD" ];
+          text = let
+            enabledNames = lib.attrNames (lib.filterAttrs (_: s: s.enable) cfg.services);
+            enabledList = lib.concatStringsSep " " (map (n: "\"${n}\"") enabledNames);
+            dinitctl = "${pkgs.dinit}/bin/dinitctl";
+          in ''
+            # Reload definitions for services in the new config
+            for svc in ${enabledList}; do
+              ${dinitctl} reload "$svc" 2>/dev/null || true
+            done
+
+            # Stop services no longer in the config
+            enabled_set="${enabledList}"
+            ${dinitctl} list 2>/dev/null | while IFS= read -r line; do
+            if [[ "$line" =~ ^\[[[:space:]]*\{[+-]\}[[:space:]]*\][[:space:]]+([a-zA-Z0-9_-]+) ]]; then
+                name="''${BASH_REMATCH[1]}"
+                case " $enabled_set " in
+                  *" ''${name} "*) ;;
+                  *) ${dinitctl} stop --no-wait "$name" 2>/dev/null || true ;;
+                esac
+              fi
+            done
+          '';
+        };
   };
 }
