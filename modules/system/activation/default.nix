@@ -206,7 +206,7 @@ in
               --subst-var-by installHook ${config.providers.bootloader.installHook} \
               --subst-var-by inhibitCheck ${config.system.build.checkSwitchInhibitors} \
               ${if config ? dinit && config.dinit.services != { }
-                then "--subst-var-by dinitctl ${pkgs.dinit}"
+                then ""
                 else "--subst-var-by finit ${config.finit.package}"}
           ''
           + lib.optionalString config.boot.bootspec.enable ''

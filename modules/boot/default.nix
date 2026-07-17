@@ -15,8 +15,13 @@
 
   options.boot.init = lib.mkOption {
     type = lib.types.path;
-    default = "${config.finit.package}/bin/finit";
-    defaultText = lib.literalExpression ''"''${config.finit.package}/bin/finit"'';
+    default =
+      if config.finit.enable
+      then "${config.finit.package}/bin/finit"
+      else "${pkgs.dinit}/bin/dinit";
+    defaultText = lib.literalExpression ''
+      if config.finit.enable then "''${config.finit.package}/bin/finit" else "''${pkgs.dinit}/bin/dinit"
+    '';
     description = ''
       Executable run as stage-2 PID 1, symlinked as `${config.system.build.toplevel}/init`.
     '';
