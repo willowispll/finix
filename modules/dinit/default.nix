@@ -104,8 +104,11 @@ in
 
     system.activation.scripts.dinitBootD = {
       deps = [ "etc" ];
-      text = lib.concatMapStrings (
-        name: "ln -sf ../${name} /etc/dinit.d/boot.d/${name}\n"
+      text = ''
+        boot_d="/etc/dinit.d/boot.d"
+        find "$boot_d" -maxdepth 1 -type l -exec rm -f {} +
+      '' + lib.concatMapStrings (
+        name: "ln -sf ../${name} $boot_d/${name}\n"
       ) (lib.attrNames (lib.filterAttrs (_: s: s.boot) cfg.services));
     };
     dinit.services.mount-fstab = {
