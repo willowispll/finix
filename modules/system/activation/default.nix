@@ -171,7 +171,24 @@ in
 
             substituteInPlace $out/activate --subst-var-by systemConfig $out
 
-            ${coreutils}/bin/ln -sr ${config.boot.init} $out/init
+            ${
+              if config ? dinit && !config.finit.enable then
+                # dinit has no equivalent of the finix-setup finit plugin (which runs
+                # activation before finit parses its config). wrap stage 2 in a script
+                # that activates first, so /etc/dinit.d/boot exists when dinit loads it.
+                ''
+                  cat > $out/init <<EOF
+                  #!${pkgs.runtimeShell}
+                  $out/activate
+                  exec ${config.dinit.package}/bin/dinit
+                  EOF
+                  chmod +x $out/init
+                ''
+              else
+                ''
+                  ${coreutils}/bin/ln -sr ${config.boot.init} $out/init
+                ''
+            }
             ${coreutils}/bin/ln -s ${config.environment.path} $out/sw
             ${coreutils}/bin/ln -s ${config.system.build.inhibitSwitch} $out/switch-inhibitors
 
